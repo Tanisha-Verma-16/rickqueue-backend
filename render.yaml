@@ -28,7 +28,7 @@ services:
         sync: false # You'll set this in dashboard
 
   # PostgreSQL Database
-  - type: pgsql
+  - type: psql
     name: rickqueue-db
     region: singapore # Same region as web service
     plan: free # FREE TIER
