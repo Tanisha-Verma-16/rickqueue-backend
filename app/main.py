@@ -9,7 +9,8 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.config.settings import settings
-from app.database.session import engine, Base, init_db
+from app.database.session import engine, init_db
+from app.database.base import Base
 from app.ai.scheduler import start_smart_dispatch_scheduler, stop_smart_dispatch_scheduler
 from app.websocket.manager import init_socketio
 
