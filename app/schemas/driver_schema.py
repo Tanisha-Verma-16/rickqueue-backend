@@ -40,12 +40,21 @@ class DriverResponse(DriverBase):
         from_attributes = True
 
 
+class OptimizationSuggestion(BaseModel):
+    """Define this BEFORE DriverDashboardResponse uses it"""
+    action: str
+    priority: str
+    message: str
+    estimated_earning_potential: float
+    reasoning: str
+
+
 class DriverDashboardResponse(BaseModel):
     driver_status: Dict
     nearby_opportunities: List[Dict]
     route_optimization: Dict
     pending_bookings_heatmap: List[Dict]
-    ai_suggestion: "OptimizationSuggestion"
+    ai_suggestion: OptimizationSuggestion  # Now defined above
 
 
 class RouteOpportunity(BaseModel):
@@ -57,11 +66,3 @@ class RouteOpportunity(BaseModel):
     forming_groups_count: int
     profit_analysis: Dict
     recommendation: str
-
-
-class OptimizationSuggestion(BaseModel):
-    action: str
-    priority: str
-    message: str
-    estimated_earning_potential: float
-    reasoning: str
