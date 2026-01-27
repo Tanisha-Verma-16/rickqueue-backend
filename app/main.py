@@ -9,8 +9,9 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.config.settings import settings
-from app.database.session import engine, Base
+from app.database.session import engine, Base, init_db
 from app.ai.scheduler import start_smart_dispatch_scheduler, stop_smart_dispatch_scheduler
+from app.websocket.manager import init_socketio
 
 # Import routers
 from app.api import auth, queue, driver, routes_api
@@ -29,8 +30,11 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting RickQueue Backend...")
     
     # Create database tables
-    Base.metadata.create_all(bind=engine)
-    logger.info("✅ Database tables created")
+    try:
+        init_db()
+        logger.info("✅ Database tables created")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
     
     # Start AI Dispatch Scheduler (runs every 30 seconds)
     start_smart_dispatch_scheduler()
@@ -152,71 +156,11 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # ===== WEBSOCKET SETUP =====
 
-import socketio
-
-# Socket.IO server
-sio = socketio.AsyncServer(
-    async_mode='asgi',
-    cors_allowed_origins=settings.CORS_ORIGINS
-)
+# Initialize Socket.IO
+sio = init_socketio(app)
 
 # Mount Socket.IO
 socket_app = socketio.ASGIApp(sio, app)
-
-
-# WebSocket Events
-@sio.event
-async def connect(sid, environ):
-    logger.info(f"Client connected: {sid}")
-
-
-@sio.event
-async def disconnect(sid):
-    logger.info(f"Client disconnected: {sid}")
-
-
-@sio.event
-async def join_group_room(sid, data):
-    """
-    User/Driver joins a group room for real-time updates
-    """
-    group_id = data.get('group_id')
-    if group_id:
-        await sio.enter_room(sid, f"group_{group_id}")
-        logger.info(f"Client {sid} joined group room: group_{group_id}")
-
-
-@sio.event
-async def driver_location_update(sid, data):
-    """
-    Driver sends live location updates
-    """
-    driver_id = data.get('driver_id')
-    lat = data.get('lat')
-    lng = data.get('lng')
-    
-    # Update database
-    from app.database.session import get_db
-    from app.models.driver import Driver
-    from datetime import datetime
-    
-    db = next(get_db())
-    driver = db.query(Driver).filter(Driver.id == driver_id).first()
-    
-    if driver:
-        driver.current_lat = lat
-        driver.current_lng = lng
-        driver.last_location_update = datetime.utcnow()
-        db.commit()
-        
-        # Broadcast to passengers in assigned group
-        if driver.assigned_groups:
-            for group in driver.assigned_groups:
-                await sio.emit(
-                    'driver_location',
-                    {'lat': lat, 'lng': lng},
-                    room=f"group_{group.id}"
-                )
 
 
 # ===== ADMIN ENDPOINTS (for testing) =====
