@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: rickqueue-postgres
+    environment:
+      POSTGRES_USER: rickqueue
+      POSTGRES_PASSWORD: rickqueue_dev_password
+      POSTGRES_DB: rickqueue
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rickqueue"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rickqueue-network
+
+  # RickQueue Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rickqueue-backend
+    environment:
+      DATABASE_URL: postgresql://rickqueue:rickqueue_dev_password@postgres:5432/rickqueue
+      ENVIRONMENT: development
+      DEBUG: "true"
+      LOG_LEVEL: DEBUG
+      FIREBASE_CREDENTIALS_PATH: /app/firebase-credentials.json
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./logs:/app/logs
+      - ./firebase-credentials.json:/app/firebase-credentials.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - rickqueue-network
+    command: >
+      sh -c "
+        echo '⏳ Waiting for database...' &&
+        sleep 5 &&
+        echo '🔄 Running migrations...' &&
+        alembic upgrade head &&
+        echo '🚀 Starting server...' &&
+        uvicorn app.main:socket_app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  # pgAdmin (Optional - for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: rickqueue-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@rickqueue.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - rickqueue-network
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  rickqueue-network:
+    driver: bridge
