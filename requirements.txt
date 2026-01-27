@@ -46,3 +46,5 @@ httpx==0.26.0
 
 # Production
 gunicorn==21.2.0
+
+email-validator
