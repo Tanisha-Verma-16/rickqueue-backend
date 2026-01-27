@@ -3,8 +3,8 @@
 #   - type: web
 #     name: rickqueue-backend
 #     env: python
-#     region: singapore # Change to your region: oregon, frankfurt, singapore
-#     plan: free # FREE TIER
+#     region: singapore
+#     plan: free
 #     branch: main
 #     buildCommand: pip install -r requirements.txt
 #     startCommand: alembic upgrade head && uvicorn app.main:socket_app --host 0.0.0.0 --port $PORT
@@ -25,26 +25,26 @@
 #           property: connectionString
 #       # Firebase credentials - you'll add this manually
 #       - key: FIREBASE_CREDENTIALS
-#         sync: false # You'll set this in dashboard
+#         sync: false
 
-#   # PostgreSQL Database
-#   - type: postgres
-#     name: rickqueue-db
-#     region: singapore # Same region as web service
-#     plan: free # FREE TIER
+# # Databases are a peer to 'services', not a child of it
+# databases:
+#   - name: rickqueue-db
+#     region: singapore
+#     plan: free
 #     databaseName: rickqueue
-#     databaseUser: rickqueue
-#     ipAllowList: [] # Allow all IPs (for web service)
+#     user: rickqueue # Note: The key is usually just 'user', not 'databaseUser' in some contexts, but check Render docs. 'user' is standard.
+#     ipAllowList: []
 
 services:
   # Web Service (Backend API)
   - type: web
     name: rickqueue-backend
     env: python
-    region: singapore
-    plan: free
+    region: singapore # Change to your region: oregon, frankfurt, singapore
+    plan: free # FREE TIER
     branch: main
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: alembic upgrade head && uvicorn app.main:socket_app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
@@ -63,13 +63,13 @@ services:
           property: connectionString
       # Firebase credentials - you'll add this manually
       - key: FIREBASE_CREDENTIALS
-        sync: false
+        sync: false # You'll set this in dashboard
 
-# Databases are a peer to 'services', not a child of it
-databases:
-  - name: rickqueue-db
-    region: singapore
-    plan: free
+  # PostgreSQL Database
+  - type: pgsql
+    name: rickqueue-db
+    region: singapore # Same region as web service
+    plan: free # FREE TIER
     databaseName: rickqueue
-    user: rickqueue # Note: The key is usually just 'user', not 'databaseUser' in some contexts, but check Render docs. 'user' is standard.
-    ipAllowList: []
+    databaseUser: rickqueue
+    ipAllowList: [] # Allow all IPs (for web service)
