@@ -6,6 +6,7 @@ Focus: Operational Excellence & Smart Dispatch (NO Payment Processing)
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import socketio
 import logging
 
 from app.config.settings import settings
